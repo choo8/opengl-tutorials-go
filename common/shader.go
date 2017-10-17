@@ -29,6 +29,7 @@ func LoadShaders(vertexFilePath, fragmentFilePath string) (uint32, error) {
 	if err := vertexShaderStream.Err(); err != nil {
 		log.Fatal(err)
 	}
+	vertexShaderCode += "\x00"
 
 	// Read the Fragment Shader code from the file
 	fragmentShaderCode := ""
@@ -45,6 +46,7 @@ func LoadShaders(vertexFilePath, fragmentFilePath string) (uint32, error) {
 	if err := fragmentShaderStream.Err(); err != nil {
 		log.Fatal(err)
 	}
+	fragmentShaderCode += "\x00"
 
 	var result int32
 	var infoLogLength int32
