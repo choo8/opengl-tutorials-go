@@ -6,13 +6,13 @@ import (
 	"github.com/go-gl/gl/v4.5-core/gl"
 	"log"
 	"os"
-	//"strings"
+	"strings"
 )
 
 const (
-	FOURCC_DXT1 string = "0x31545844"
-	FOURCC_DXT3 string = "0x33545844"
-	FOURCC_DXT5 string = "0x35545844"
+	FOURCC_DXT1 uint32 = uint32(0x31545844)
+	FOURCC_DXT3 uint32 = uint32(0x33545844)
+	FOURCC_DXT5 uint32 = uint32(0x35545844)
 )
 
 func LoadBMPCustom(imagepath string) uint32 {
@@ -76,7 +76,7 @@ func LoadBMPCustom(imagepath string) uint32 {
 	gl.BindTexture(gl.TEXTURE_2D, textureId)
 
 	// Give the image to OpenGL
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, int32(width), int32(height), 0, gl.BGR, gl.UNSIGNED_BYTE, gl.Ptr(data))
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGB, int32(width), int32(height), 0, gl.BGR, gl.UNSIGNED_BYTE, gl.Ptr(&data[0]))
 
 	// ... nice trilinear filtering ...
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT)
@@ -89,8 +89,9 @@ func LoadBMPCustom(imagepath string) uint32 {
 	return textureId
 }
 
-/*
 func LoadDDS(imagepath string) uint32 {
+	var header []byte
+
 	// try to open the file
 	f, err := os.Open(imagepath)
 	if err != nil {
@@ -99,14 +100,15 @@ func LoadDDS(imagepath string) uint32 {
 	defer f.Close()
 
 	// verify the type of file
-	filecode := make([]byte, 4)
+	var filecode []byte
+	filecode = make([]byte, 4)
 	f.Read(filecode)
 	if strings.Compare(string(filecode), "DDS ") != 0 {
 		return 0
 	}
 
 	// get surface desc
-	header := make([]byte, 124)
+	header = make([]byte, 124)
 	f.Read(header)
 
 	height := binary.LittleEndian.Uint32(header[8:12])
@@ -116,15 +118,66 @@ func LoadDDS(imagepath string) uint32 {
 	fourCC := binary.LittleEndian.Uint32(header[80:84])
 
 	var bufsize uint32
-	buffer := make([]byte, bufsize)
 	// how big is it going to be including all mipmaps?
 	if mipMapCount > 1 {
-		bufsize := linearSize * 2
+		bufsize = linearSize * 2
 	} else {
-		bufsize := linearSize
+		bufsize = linearSize
 	}
+	buffer := make([]byte, bufsize)
 	f.Read(buffer)
+	/*
+		if fourCC == FOURCC_DXT1 {
+			components := 3
+		} else {
+			components := 4
+		}
+	*/
+	var format uint32
+	switch fourCC {
+	case FOURCC_DXT1:
+		format = 33777 // Decimal value for GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
+	case FOURCC_DXT3:
+		format = 33778 // Decimal value for GL_COMPRESSED_RGBA_S3TC_DXT3_EXT
+	case FOURCC_DXT5:
+		format = 33779 // Decimal value for GL_COMPRESSED_RGBA_S3TC_DXT5_EXT
+	default:
 
-	return 0
+	}
+
+	// Create one OpenGL texture
+	var textureId uint32
+	gl.GenTextures(1, &textureId)
+
+	// "Bind" the newly created texture : all future texture functions will modify this texture
+	gl.BindTexture(gl.TEXTURE_2D, textureId)
+	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
+
+	var blockSize uint32
+	if format == 33777 {
+		blockSize = 8
+	} else {
+		blockSize = 16
+	}
+	offset := 0
+
+	// load the mipmaps
+	for level := 0; level < int(mipMapCount) && (width > 0 || height > 0); level++ {
+		size := ((width + 3) / 4) * ((height + 3) / 4) * blockSize
+		gl.CompressedTexImage2D(gl.TEXTURE_2D, int32(level), format, int32(width), int32(height), 0, int32(size), gl.Ptr(&buffer[0+offset]))
+
+		offset += int(size)
+		width /= 2
+		height /= 2
+
+		// Deal with Non-Power-Of-Two textures. This code is not included in the webpage to reduce clutter.
+		if width < 1 {
+			width = 1
+		}
+		if height < 1 {
+			height = 1
+		}
+	}
+
+	return textureId
 }
-*/

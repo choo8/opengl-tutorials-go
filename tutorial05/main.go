@@ -69,7 +69,8 @@ func main() {
 	MVP := projection.Mul4(view.Mul4(model))
 
 	// Load the texture using any two methods
-	texture := common.LoadBMPCustom("uvtemplate.bmp")
+	//texture := common.LoadBMPCustom("uvtemplate.bmp")
+	texture := common.LoadDDS("uvtemplate.DDS")
 
 	// Get a handle for our "myTextureSampler" uniform
 	textureId := gl.GetUniformLocation(programId, gl.Str("myTextureSampler"+"\x00"))
