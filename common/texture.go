@@ -91,6 +91,7 @@ func LoadBMPCustom(imagepath string) uint32 {
 
 func LoadDDS(imagepath string) uint32 {
 	var header []byte
+	header = make([]byte, 124)
 
 	// try to open the file
 	f, err := os.Open(imagepath)
@@ -108,8 +109,7 @@ func LoadDDS(imagepath string) uint32 {
 	}
 
 	// get surface desc
-	header = make([]byte, 124)
-	f.Read(header)
+	f.ReadAt(header, 4)
 
 	height := binary.LittleEndian.Uint32(header[8:12])
 	width := binary.LittleEndian.Uint32(header[12:16])
@@ -125,7 +125,7 @@ func LoadDDS(imagepath string) uint32 {
 		bufsize = linearSize
 	}
 	buffer := make([]byte, bufsize)
-	f.Read(buffer)
+	f.ReadAt(buffer, 128)
 	/*
 		if fourCC == FOURCC_DXT1 {
 			components := 3
